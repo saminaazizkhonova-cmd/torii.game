@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Путь через тории — игра о синтоизме</title>
+<style>
+:root{
+  --bg:#052932; --panel:#14424C; --panel2:#346069;
+  --cream:#F0EACC; --paper:#FCF8E6; --red:#CA2029;
+  --gold:#D9B979; --muted:#A7B5AC; --ok:#2e8b57; --bad:#CA2029;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  background:var(--bg);color:var(--cream);
+  font-family:"Noto Sans Display","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  line-height:1.45;
+  border-left:10px solid var(--red);
+}
+.app{max-width:900px;margin:0 auto;padding:20px 20px 60px;min-height:100vh;display:flex;flex-direction:column}
+header.top{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.08em;font-weight:700;text-transform:uppercase;margin-bottom:12px}
+header.top .crumb{color:var(--muted);font-weight:500}
+.progress{height:6px;background:var(--panel);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress i{display:block;height:100%;width:0;background:var(--red);transition:width .4s}
+.scorebar{display:flex;justify-content:flex-end;font-size:13px;color:var(--gold);font-weight:700;margin-bottom:18px;min-height:20px}
+h1,h2{text-transform:uppercase;line-height:1.05;letter-spacing:.01em}
+h1{font-size:clamp(38px,8vw,64px);margin-bottom:10px}
+h2{font-size:clamp(28px,5.5vw,44px);margin-bottom:6px}
+.sub{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px}
+.lead{color:var(--muted);margin-bottom:18px}
+.screen{display:none;animation:fade .35s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+hr{border:0;border-top:2px solid var(--cream);margin:18px 0;max-width:420px}
+
+/* intro */
+.hero{display:flex;gap:24px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.torii{width:170px;flex:none}
+.rules{list-style:none;margin:20px 0}
+.rules li{background:var(--panel);border-radius:8px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.rules li b{color:var(--gold)}
+.goal{font-weight:700;text-transform:uppercase;margin:16px 0 22px}
+input.name{width:100%;max-width:360px;padding:12px 14px;border-radius:10px;border:2px solid var(--panel2);background:var(--panel);color:var(--cream);font:inherit;margin-bottom:18px}
+input.name:focus,textarea:focus{outline:none;border-color:var(--gold)}
+
+/* buttons */
+.btn{display:inline-block;background:var(--cream);color:var(--bg);border:0;border-radius:10px;padding:13px 26px;font:inherit;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:transform .12s,background .2s;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.btn:hover:not(:disabled){transform:translateY(-2px);background:#fff}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.red{background:var(--red);color:#fff}
+.btn.ghost{background:transparent;color:var(--cream);border:2px solid var(--panel2);box-shadow:none}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+
+/* question cards */
+.card{background:var(--paper);color:var(--bg);border-radius:20px;padding:20px 22px;margin-bottom:16px;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.card h3{font-size:18px;margin-bottom:12px}
+.card h3 span{color:var(--red);margin-right:10px}
+.opts{display:flex;gap:10px;flex-wrap:wrap}
+.opt{flex:1 1 140px;border:2px solid #d9d2b0;background:#fff;color:var(--bg);border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer;text-align:left;transition:.15s}
+.opt:hover:not(:disabled){border-color:var(--red);transform:translateY(-2px)}
+.opt:disabled{cursor:default}
+.opt.correct{background:#d8f0e0;border-color:var(--ok)}
+.opt.wrong{background:#f8d9db;border-color:var(--bad)}
+.fb{margin-top:12px;font-size:14px;display:none}
+.fb.show{display:block}
+.fb b.ok{color:var(--ok)} .fb b.no{color:var(--bad)}
+textarea{width:100%;min-height:90px;border-radius:12px;border:2px solid #d9d2b0;padding:12px;font:inherit;color:var(--bg);background:#fff;resize:vertical}
+.card.dark{background:var(--panel);color:var(--cream)}
+.card.dark textarea{background:var(--bg);color:var(--cream);border-color:var(--panel2)}
+.ref{display:none;margin-top:14px;padding-top:12px;border-top:2px dashed #cfc8a2}
+.ref.show{display:block}
+.ref p.ans{font-weight:700;margin-bottom:10px}
+.crit{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.06);margin-bottom:8px;cursor:pointer;font-size:14px}
+.card.dark .crit{background:rgba(255,255,255,.07)}
+.crit input{width:20px;height:20px;accent-color:var(--red);flex:none;margin-top:2px}
+.hint{font-size:12px;color:#6b6a55;margin-top:6px}
+.card.dark .hint{color:var(--muted)}
+
+/* omikuji */
+.omi{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin:24px 0}
+.omi button{width:200px;height:300px;perspective:800px;background:none;border:0;cursor:pointer;font:inherit}
+.omi .face{width:100%;height:100%;background:var(--cream);color:var(--bg);border:3px solid var(--red);border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;box-shadow:0 8px 20px rgba(0,0,0,.35);transition:transform .45s,box-shadow .2s;position:relative}
+.omi .face::before{content:"";position:absolute;top:22px;left:20px;right:20px;border-top:3px solid #7a2a2a}
+.omi button:hover .face{transform:translateY(-8px) rotate(-1.5deg);box-shadow:0 14px 26px rgba(0,0,0,.45)}
+.omi button.picked .face{transform:rotateY(90deg) scale(1.08)}
+.omi .num{width:64px;height:64px;border-radius:50%;background:var(--red);color:#fff;font-size:30px;font-weight:800;display:grid;place-items:center}
+.omi .kanji{font-size:28px;font-weight:700;letter-spacing:.1em}
+.omi .lbl{font-size:12px;font-weight:800;letter-spacing:.1em}
+.tag{display:inline-block;background:var(--red);color:#fff;font-weight:800;font-size:12px;letter-spacing:.1em;padding:4px 12px;border-radius:20px;margin-bottom:12px}
+.bigq{font-size:clamp(22px,4vw,30px);font-weight:700;margin-bottom:16px}
+.timer{display:flex;align-items:center;gap:12px;margin:12px 0;font-weight:800}
+.timer .t{font-size:30px;color:var(--gold);min-width:2ch;text-align:center}
+.timer.done .t{color:var(--red)}
+
+/* result */
+.result{text-align:center;padding:10px 0}
+.ring{width:210px;height:210px;border-radius:50%;margin:10px auto 18px;display:grid;place-items:center;background:conic-gradient(var(--red) calc(var(--p)*1%),var(--panel) 0);transition:--p 1s}
+.ring div{width:170px;height:170px;border-radius:50%;background:var(--bg);display:grid;place-items:center}
+.ring b{font-size:64px;line-height:1}
+.ring small{display:block;font-size:14px;color:var(--muted);font-weight:700}
+.tiers{max-width:520px;margin:18px auto}
+.tier{background:var(--panel);border-radius:12px;padding:14px 18px;margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;text-align:left;opacity:.55}
+.tier.on{background:var(--cream);color:var(--bg);opacity:1;transform:scale(1.03)}
+table.sum{margin:16px auto;border-collapse:collapse;width:100%;max-width:520px;font-size:14px}
+table.sum td{padding:8px 12px;border-bottom:1px solid var(--panel2);text-align:left}
+table.sum td:last-child{text-align:right;color:var(--gold);font-weight:800}
+.keys{font-weight:800;letter-spacing:.06em;margin-top:18px}
+.note{font-size:12px;color:var(--muted);margin-top:30px}
+@media (max-width:560px){.torii{width:110px}.omi button{width:46%;height:230px}.omi .num{width:48px;height:48px;font-size:22px}.omi .kanji{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <span>Religious Studies &nbsp;•&nbsp; EB 2A</span>
+    <span class="crumb" id="crumb">Интерактив / Правила</span>
+  </header>
+  <div class="progress"><i id="bar"></i></div>
+  <div class="scorebar" id="scorebar"></div>
+
+  <!-- 1. ПРАВИЛА -->
+  <section class="screen active" id="s-intro">
+    <div class="hero">
+      <div>
+        <h1>Путь через<br>тории</h1>
+        <div class="sub">Испытание знаний о синтоизме</div>
+      </div>
+      <svg class="torii" viewBox="0 0 160 150" aria-hidden="true" fill="#CA2029">
+        <rect x="4" y="10" width="152" height="12" rx="2"/>
+        <rect x="16" y="26" width="128" height="8"/>
+        <rect x="28" y="22" width="10" height="128"/>
+        <rect x="122" y="22" width="10" height="128"/>
+        <rect x="14" y="52" width="132" height="10"/>
+      </svg>
+    </div>
+    <hr>
+    <p class="lead">Пройдите трое ворот и соберите как можно больше баллов. Всего — максимум 9.</p>
+    <ul class="rules">
+      <li><span>Ворота I • Память</span><b>2 б.</b></li>
+      <li><span>Ворота II • Смысл</span><b>4 б.</b></li>
+      <li><span>Омикудзи • Выбор</span><b>3 б.</b></li>
+    </ul>
+    <p class="goal">Цель: собрать 7 из 9 баллов</p>
+    <input class="name" id="name" type="text" placeholder="Ваше имя (по желанию)" maxlength="40" autocomplete="off">
+    <div class="actions"><button class="btn red" id="start">Начать путь →</button></div>
+  </section>
+
+  <!-- 2. ВОРОТА I -->
+  <section class="screen" id="s-g1">
+    <h2>Ворота I &nbsp;Память</h2>
+    <div class="sub">Выберите один вариант ответа</div>
+    <div id="g1q"></div>
+    <div class="sub" style="margin-top:6px;color:var(--gold)">1 балл за каждый верный ответ</div>
+    <div class="actions"><button class="btn red" id="g1next" disabled>Далее →</button></div>
+  </section>
+
+  <!-- 3. ВОРОТА II -->
+  <section class="screen" id="s-g2">
+    <h2>Ворота II &nbsp;Понимание</h2>
+    <div class="sub">Напишите короткий ответ, затем сверьтесь с разбором</div>
+    <div id="g2q"></div>
+    <div class="sub" style="color:var(--gold)">До 2 баллов за каждый ответ</div>
+    <div class="actions">
+      <button class="btn" id="g2show">Показать ответы</button>
+      <button class="btn red" id="g2next" disabled>К омикудзи →</button>
+    </div>
+  </section>
+
+  <!-- 4. ВЫБОР КАРТОЧКИ -->
+  <section class="screen" id="s-pick">
+    <h2>Ворота III &nbsp;Омикудзи</h2>
+    <p class="lead">Выберите одну из трёх закрытых карточек. За каждой — особое финальное задание.</p>
+    <div class="omi" id="omi"></div>
+    <div class="sub">Нажмите на выбранную карточку</div>
+    <div class="note" style="margin-top:0">Игровая адаптация мотива омикудзи (японских бумажных жребиев-предсказаний), не религиозный ритуал.</div>
+  </section>
+
+  <!-- 5. ВОПРОС ОМИКУДЗИ -->
+  <section class="screen" id="s-omi">
+    <span class="tag" id="omiTag"></span>
+    <div class="bigq" id="omiQ"></div>
+    <div class="card dark">
+      <div class="timer" id="timer"><span>Подумайте:</span><span class="t" id="tnum">15</span><button class="btn ghost" id="tbtn" style="padding:8px 16px">Старт</button></div>
+      <textarea id="omiText" placeholder="Ваш развёрнутый ответ…"></textarea>
+      <div class="ref" id="omiRef"></div>
+    </div>
+    <div class="sub" style="color:var(--gold)">За верный развёрнутый ответ — до 3 баллов</div>
+    <div class="actions">
+      <button class="btn" id="omiShow">Показать ответ →</button>
+      <button class="btn red" id="omiNext" disabled>К итогам →</button>
+      <button class="btn ghost" id="omiBack">← Выбор карты</button>
+    </div>
+  </section>
+
+  <!-- 6. ИТОГИ -->
+  <section class="screen" id="s-end">
+    <div class="result">
+      <h2>Путь завершён!</h2>
+      <div class="sub" id="who"></div>
+      <div class="ring" id="ring" style="--p:0"><div><span><b id="finalScore">0</b><small>из 9 баллов</small></span></div></div>
+      <div class="tiers" id="tiers"></div>
+      <table class="sum" id="sum"></table>
+      <div class="keys">Ками &nbsp;•&nbsp; Природа &nbsp;•&nbsp; Традиции</div>
+      <div class="note" style="margin-top:6px">Три ключа к пониманию синтоизма</div>
+      <div class="actions" style="justify-content:center"><button class="btn red" id="again">Играть снова</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  /* ---------- ДАННЫЕ ---------- */
+  var G1 = [
+    {q:"Как называются божества и духовные силы?", o:["ками","сутры","ёкаи"], c:0,
+     e:"Ками — божества и духовные силы синтоизма, связанные в том числе с природой и предками. Ёкаи — не название всех божеств."},
+    {q:"Аматэрасу — богиня…", o:["Солнца","Луны","ветра"], c:0,
+     e:"Аматэрасу — богиня Солнца. В мифологии связана с императорской династией."}
+  ];
+  var G2 = [
+    {q:"Жители района вместе участвуют в празднике святилища. Какая функция религии здесь проявляется?",
+     a:"Объединяющая функция. Праздники и общие обряды объединяют людей и укрепляют связи в обществе.",
+     crit:["Названа «объединяющая функция»","Объяснено, что праздники укрепляют общность людей"]},
+    {q:"Священные рощи вокруг святилищ. Почему для синтоизма это больше, чем просто лес?",
+     a:"Сакральная природа. Рощи связаны с почитанием ками, уважением к природе и преемственностью традиций.",
+     crit:["Рощи связаны с сакральным присутствием ками","Уважение к природе, её сохранение и преемственность традиций"]}
+  ];
+  var OMI = [
+    {n:1, tag:"Омикудзи № 1 • Природа",
+     q:"Почему синтоизм иногда называют «природной духовностью»? Приведите пример.",
+     crit:["Ками могут быть связаны с горами, лесами, реками.","Природу воспринимают с уважением и почтением.","Священные рощи у святилищ сохраняют эту связь."]},
+    {n:2, tag:"Омикудзи № 2 • История",
+     q:"Что изменилось в положении синтоизма после Второй мировой войны?",
+     crit:["Прежняя форма государственного синтоизма была прекращена.","Император отказался от утверждения о божественности.","Святилища, обряды и праздники сохранились."]},
+    {n:3, tag:"Омикудзи № 3 • Современность",
+     q:"Где сегодня можно увидеть влияние синтоизма? Назовите три примера.",
+     crit:["Посещение святилищ, в том числе в Новый год.","Местные праздники, семейные традиции и обряды.","Образы ками и символы синтоизма в аниме и играх."]}
+  ];
+  var TIERS = [
+    {min:7, t:"7–9 баллов • Хранители пути", m:"Цель выполнена!"},
+    {min:4, t:"4–6 баллов • Почти у цели", m:"Совсем немного не хватило."},
+    {min:0, t:"0–3 балла • Есть что вспомнить", m:"Повторим основные идеи и попробуем снова."}
+  ];
+
+  /* ---------- СОСТОЯНИЕ ---------- */
+  var $ = function(id){return document.getElementById(id)};
+  var state, tInt;
+  var STEPS = {intro:0,g1:1,g2:2,pick:3,omi:4,end:5};
+  var CRUMB = {intro:"Интерактив / Правила",g1:"Ворота I",g2:"Ворота II",pick:"Ворота III / Омикудзи",omi:"Омикудзи / Вопрос",end:"Итоги игры"};
+
+  function fresh(){
+    state = {name:"", g1:[null,null], g2:[[],[]], g2shown:false, omiIdx:null, omi:[], omiShown:false};
+  }
+  function total(){
+    var s=0;
+    state.g1.forEach(function(v,i){ if(v===G1[i].c) s++; });
+    state.g2.forEach(function(a){ s+=a.filter(Boolean).length; });
+    s+=state.omi.filter(Boolean).length;
+    return s;
+  }
+  function show(id){
+    document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active")});
+    $("s-"+id).classList.add("active");
+    $("crumb").textContent = CRUMB[id];
+    $("bar").style.width = (STEPS[id]/5*100)+"%";
+    $("scorebar").textContent = (id==="intro"||id==="end") ? "" : "Баллов: "+total()+" / 9";
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  /* ---------- ИНТРО ---------- */
+  $("start").onclick = function(){
+    fresh(); state.name = $("name").value.trim();
+    buildG1(); buildG2(); show("g1");
+  };
+
+  /* ---------- ВОРОТА I ---------- */
+  function buildG1(){
+    var box=$("g1q"); box.innerHTML="";
+    $("g1next").disabled=true;
+    G1.forEach(function(it,qi){
+      var d=document.createElement("div"); d.className="card";
+      d.innerHTML='<h3><span>0'+(qi+1)+'</span>'+esc(it.q)+'</h3><div class="opts"></div><div class="fb"></div>';
+      var opts=d.querySelector(".opts");
+      it.o.forEach(function(txt,oi){
+        var b=document.createElement("button"); b.className="opt"; b.textContent=(oi+1)+" — "+txt;
+        b.onclick=function(){
+          state.g1[qi]=oi;
+          opts.querySelectorAll(".opt").forEach(function(x,k){
+            x.disabled=true;
+            if(k===it.c) x.classList.add("correct");
+            else if(k===oi) x.classList.add("wrong");
+          });
+          var fb=d.querySelector(".fb"); fb.classList.add("show");
+          fb.innerHTML=(oi===it.c?'<b class="ok">Верно! +1 балл.</b> ':'<b class="no">Неверно.</b> ')+esc(it.e);
+          $("scorebar").textContent="Баллов: "+total()+" / 9";
+          if(state.g1.every(function(v){return v!==null})) $("g1next").disabled=false;
+        };
+        opts.appendChild(b);
+      });
+      box.appendChild(d);
+    });
+  }
+  $("g1next").onclick=function(){ show("g2"); };
+
+  /* ---------- ВОРОТА II ---------- */
+  function buildG2(){
+    var box=$("g2q"); box.innerHTML="";
+    $("g2show").disabled=false; $("g2next").disabled=true;
+    G2.forEach(function(it,qi){
+      var d=document.createElement("div"); d.className="card";
+      d.innerHTML='<h3><span>0'+(qi+3)+'</span>'+esc(it.q)+'</h3>'+
+        '<textarea placeholder="Ваш ответ…"></textarea>'+
+        '<div class="ref"><p class="ans">'+esc(it.a)+'</p>'+
+        '<div class="hint" style="margin-bottom:8px">Честно отметьте, что было в вашем ответе (по 1 баллу):</div></div>';
+      var ref=d.querySelector(".ref");
+      it.crit.forEach(function(c,ci){
+        var l=document.createElement("label"); l.className="crit";
+        l.innerHTML='<input type="checkbox"><span>'+esc(c)+'</span>';
+        l.querySelector("input").onchange=function(e){
+          state.g2[qi][ci]=e.target.checked;
+          $("scorebar").textContent="Баллов: "+total()+" / 9";
+        };
+        ref.appendChild(l);
+      });
+      box.appendChild(d);
+    });
+  }
+  $("g2show").onclick=function(){
+    document.querySelectorAll("#g2q .ref").forEach(function(r){r.classList.add("show")});
+    document.querySelectorAll("#g2q textarea").forEach(function(t){t.readOnly=true});
+    state.g2shown=true; $("g2show").disabled=true; $("g2next").disabled=false;
+  };
+  $("g2next").onclick=function(){ buildOmi(); show("pick"); };
+
+  /* ---------- ОМИКУДЗИ: ВЫБОР ---------- */
+  function buildOmi(){
+    var box=$("omi"); box.innerHTML="";
+    OMI.forEach(function(o,i){
+      var b=document.createElement("button");
+      b.setAttribute("aria-label","Карточка "+o.n);
+      b.innerHTML='<div class="face"><div class="num">'+o.n+'</div><div class="kanji">御神籤</div><div class="lbl">ОМИКУДЗИ</div></div>';
+      b.onclick=function(){
+        box.querySelectorAll("button").forEach(function(x){x.disabled=true});
+        b.classList.add("picked");
+        setTimeout(function(){ openOmi(i); },450);
+      };
+      box.appendChild(b);
+    });
+  }
+
+  /* ---------- ОМИКУДЗИ: ВОПРОС / ОТВЕТ ---------- */
+  function openOmi(i){
+    var o=OMI[i]; state.omiIdx=i; state.omi=[]; state.omiShown=false;
+    $("omiTag").textContent=o.tag; $("omiQ").textContent=o.q;
+    $("omiText").value=""; $("omiText").readOnly=false;
+    var ref=$("omiRef"); ref.className="ref"; ref.innerHTML='<p class="ans">Разгадка • критерии (по 1 баллу):</p>';
+    o.crit.forEach(function(c,ci){
+      var l=document.createElement("label"); l.className="crit";
+      l.innerHTML='<input type="checkbox"><span>'+esc(c)+'</span>';
+      l.querySelector("input").onchange=function(e){
+        state.omi[ci]=e.target.checked;
+        $("scorebar").textContent="Баллов: "+total()+" / 9";
+      };
+      ref.appendChild(l);
+    });
+    $("omiShow").disabled=false; $("omiNext").disabled=true;
+    resetTimer(); show("omi");
+  }
+  $("omiShow").onclick=function(){
+    $("omiRef").classList.add("show"); $("omiText").readOnly=true;
+    $("omiShow").disabled=true; $("omiNext").disabled=false; stopTimer();
+  };
+  $("omiBack").onclick=function(){ stopTimer(); buildOmi(); show("pick"); };
+  $("omiNext").onclick=function(){ stopTimer(); finish(); };
+
+  /* таймер на размышление */
+  function resetTimer(){ stopTimer(); $("tnum").textContent="15"; $("timer").classList.remove("done"); $("tbtn").textContent="Старт"; $("tbtn").disabled=false; }
+  function stopTimer(){ clearInterval(tInt); tInt=null; }
+  $("tbtn").onclick=function(){
+    if(tInt) return;
+    var n=15; $("tbtn").disabled=true; $("timer").classList.remove("done");
+    tInt=setInterval(function(){
+      n--; $("tnum").textContent=n;
+      if(n<=0){ stopTimer(); $("timer").classList.add("done"); $("tbtn").textContent="Время вышло"; }
+    },1000);
+  };
+
+  /* ---------- ИТОГИ ---------- */
+  function finish(){
+    var s=total();
+    $("who").textContent = state.name ? "Участник: "+state.name : "";
+    $("finalScore").textContent=s;
+    var tiers=$("tiers"); tiers.innerHTML="";
+    var cur = TIERS.find(function(t){return s>=t.min});
+    TIERS.forEach(function(t){
+      var d=document.createElement("div"); d.className="tier"+(t===cur?" on":""); d.textContent=t.t; tiers.appendChild(d);
+    });
+    var g1=state.g1.filter(function(v,i){return v===G1[i].c}).length;
+    var g2=state.g2.reduce(function(a,x){return a+x.filter(Boolean).length},0);
+    var om=state.omi.filter(Boolean).length;
+    $("sum").innerHTML =
+      "<tr><td>Ворота I • Память</td><td>"+g1+" / 2</td></tr>"+
+      "<tr><td>Ворота II • Смысл</td><td>"+g2+" / 4</td></tr>"+
+      "<tr><td>Омикудзи № "+(state.omiIdx+1)+"</td><td>"+om+" / 3</td></tr>"+
+      "<tr><td><b>Итого</b></td><td>"+s+" / 9</td></tr>";
+    show("end");
+    $("ring").style.setProperty("--p",0);
+    setTimeout(function(){ $("ring").style.setProperty("--p", Math.round(s/9*100)); },100);
+  }
+  $("again").onclick=function(){ fresh(); $("name").value=""; show("intro"); };
+
+  fresh();
+})();
+</script>
+</body>
+</html>
